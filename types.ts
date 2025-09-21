@@ -30,7 +30,15 @@ export type Theme = 'light' | 'dark' | 'dusk' | 'sakura';
 
 export type Language = 'en' | 'ko';
 
-export type AuthState = 'loading' | 'unverified' | 'verified' | 'error';
+export type AuthState = 'loading' | 'unverified' | 'verified'; // Removed 'error' state, will be handled by notification
+
+export interface NotificationState {
+    isOpen: boolean;
+    type: 'success' | 'error';
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+}
 
 export interface LanguageOption {
   code: Language;

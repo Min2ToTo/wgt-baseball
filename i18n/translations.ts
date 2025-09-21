@@ -21,6 +21,12 @@ const enTranslations: Translation = {
     verifyAction: "Verify with World ID",
     retry: "Retry",
   },
+  notification: {
+    verificationSuccessTitle: "Verification Successful!",
+    verificationSuccessMessage: "Welcome! You can now access the game.",
+    verificationErrorTitle: "Verification Failed",
+    verificationErrorMessage: "The verification process failed or was cancelled. Please try again.",
+  },
   main: {
     challengeMode: "Challenge Mode",
     practiceMode: "Practice Mode",
@@ -192,6 +198,12 @@ const koTranslations: Translation = {
         verifyDescription: "공정하고 봇 없는 게임 환경을 위해, 월드 ID로 고유한 사용자임을 인증해주세요.",
         verifyAction: "World ID로 인증",
         retry: "다시 시도",
+    },
+    notification: {
+        verificationSuccessTitle: "인증 성공!",
+        verificationSuccessMessage: "환영합니다! 이제 게임에 접속할 수 있습니다.",
+        verificationErrorTitle: "인증 실패",
+        verificationErrorMessage: "인증 과정에 실패했거나 사용자가 취소했습니다. 다시 시도해주세요.",
     },
     main: {
       challengeMode: "도전 모드",

@@ -2,27 +2,16 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { GameScreen } from './components/GameScreen';
 import { MainScreen } from './components/MainScreen';
 import { GameContext, GameContextType } from './contexts/GameContext';
-import { GameMode, Language, Theme, AuthState } from './types';
+import { GameMode, Language, Theme, AuthState, NotificationState } from './types';
 import { translations } from './i18n/translations';
 import { LanguageSelectionModal } from './components/modals/LanguageSelectionModal';
 import { HelpModal } from './components/modals/HelpModal';
-import { ethers } from 'ethers';
 import { AchievementsScreen } from './components/AchievementsScreen';
 import { RankingScreen } from './components/RankingScreen';
 import { AuthScreen } from './components/AuthScreen';
 import { WORLD_ID_ACTION_IDENTIFIER } from './constants';
 import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js';
-
-// World App Bridge type definition is now handled by MiniKit
-
-// TODO: Replace with your actual deployed contract address and ABI
-const WGT_CONTRACT_ADDRESS = '0x0000000000000000000000000000000000000000'; // Using a placeholder address
-const WGT_CONTRACT_ABI = [
-    // A minimal ABI for balanceOf
-    "function balanceOf(address owner) view returns (uint256)"
-];
-// TODO: Replace with a valid RPC URL (e.g., from Alchemy or Infura for the correct network)
-const RPC_URL = 'https://rpc.sepolia.org'; // Example public RPC for Sepolia testnet
+import { NotificationModal } from './components/modals/NotificationModal';
 
 const App: React.FC = () => {
     const [screen, setScreen] = useState<'main' | 'game' | 'achievements' | 'ranking'>('main');
@@ -33,18 +22,73 @@ const App: React.FC = () => {
     const [theme, setTheme] = useState<Theme>('light');
     
     // Authentication & User Data
-    const [authState, setAuthState] = useState<AuthState>('unverified'); // Start as unverified
+    const [authState, setAuthState] = useState<AuthState>('unverified');
     const [walletAddress, setWalletAddress] = useState<string | null>(null);
     const [wgt, setWgt] = useState(0);
+
+    // Notification State
+    const [notification, setNotification] = useState<NotificationState | null>(null);
 
     // Onboarding State
     const [isOnboarding, setIsOnboarding] = useState(false);
     
+    // FIX: Moved `t` function definition before its use to resolve block-scoped variable error.
+    const t = useCallback((key: string, params?: { [key: string]: string | number }) => {
+        const keys = key.split('.');
+        let result: any = translations[language];
+        for (const k of keys) {
+            result = result?.[k];
+            if (result === undefined) return key;
+        }
+
+        if (Array.isArray(result)) {
+            result = result[Math.floor(Math.random() * result.length)];
+        }
+
+        if (typeof result !== 'string') {
+             console.error(`Translation for key '${key}' is not a string.`);
+             return key;
+        }
+
+        if (params) {
+            return result.replace(/\{\{(\w+)\}\}/g, (match, placeholder) => {
+                return params[placeholder] !== undefined ? String(params[placeholder]) : match;
+            });
+        }
+        
+        return result;
+    }, [language]);
+
+    const showNotification = useCallback((notificationDetails: Omit<NotificationState, 'isOpen'>) => {
+        setNotification({ ...notificationDetails, isOpen: true });
+    }, []);
+
+    const hideNotification = () => {
+        if (notification?.onConfirm) {
+            notification.onConfirm();
+        }
+        setNotification(null);
+    };
+    
+    const handleVerificationSuccess = useCallback(() => {
+        setAuthState('verified');
+        if (isOnboarding) {
+            setIsHelpModalOpen(true);
+        }
+    }, [isOnboarding]);
+
     const handleAuthentication = useCallback(async () => {
         if (!MiniKit.isInstalled()) {
             console.warn("MiniKit not found. Running in standalone debug mode.");
-            setAuthState('verified');
-            setWalletAddress('0xDEBUG000000000000000000000000000000000000');
+            showNotification({
+                type: 'success',
+                title: 'Debug Mode',
+                message: 'Successfully connected in debug mode.',
+                onConfirm: () => {
+                     setWalletAddress('0xDEBUG000000000000000000000000000000000000');
+                     handleVerificationSuccess();
+                }
+            });
             return;
         }
 
@@ -56,23 +100,32 @@ const App: React.FC = () => {
             });
 
             if (finalPayload.status === 'success' && finalPayload.proof) {
-                // In a real app, this proof MUST be verified on a backend.
-                // For this MVP, we trust the successful proof generation as verification.
-                // The nullifier_hash from the payload is a representation of the user's unique identity.
                 setWalletAddress(finalPayload.nullifier_hash); 
-                setAuthState('verified');
-                if (isOnboarding) {
-                    setIsHelpModalOpen(true);
-                }
+                showNotification({
+                    type: 'success',
+                    title: t('notification.verificationSuccessTitle'),
+                    message: t('notification.verificationSuccessMessage'),
+                    onConfirm: handleVerificationSuccess,
+                });
             } else {
                 console.error('Verification failed or was cancelled.', finalPayload);
-                setAuthState('error');
+                showNotification({
+                    type: 'error',
+                    title: t('notification.verificationErrorTitle'),
+                    message: t('notification.verificationErrorMessage'),
+                });
+                setAuthState('unverified');
             }
         } catch (error) {
             console.error("Error during MiniKit verification:", error);
-            setAuthState('error');
+             showNotification({
+                type: 'error',
+                title: t('notification.verificationErrorTitle'),
+                message: t('notification.verificationErrorMessage'),
+            });
+            setAuthState('unverified');
         }
-    }, [isOnboarding]);
+    }, [t, handleVerificationSuccess, showNotification]);
 
     useEffect(() => {
         const savedLang = localStorage.getItem('wgt-baseball-lang') as Language;
@@ -101,14 +154,7 @@ const App: React.FC = () => {
 
     useEffect(() => {
         if (!walletAddress) return;
-
-        const fetchBalances = async () => {
-            console.log(`User is considered logged in. Unique Nullifier Hash: ${walletAddress}`);
-            console.log("Since real-time balance fetching requires a real contract and wallet, we'll use mock data.");
-            setWgt(150);
-        };
-
-        fetchBalances();
+        setWgt(150);
     }, [walletAddress]);
     
     const handleLanguageSelected = (lang: Language) => {
@@ -124,32 +170,6 @@ const App: React.FC = () => {
             setIsOnboarding(false);
         }
     };
-
-    const t = useCallback((key: string, params?: { [key: string]: string | number }) => {
-        const keys = key.split('.');
-        let result: any = translations[language];
-        for (const k of keys) {
-            result = result?.[k];
-            if (result === undefined) return key;
-        }
-
-        if (Array.isArray(result)) {
-            result = result[Math.floor(Math.random() * result.length)];
-        }
-
-        if (typeof result !== 'string') {
-             console.error(`Translation for key '${key}' is not a string.`);
-             return key;
-        }
-
-        if (params) {
-            return result.replace(/\{\{(\w+)\}\}/g, (match, placeholder) => {
-                return params[placeholder] !== undefined ? String(params[placeholder]) : match;
-            });
-        }
-        
-        return result;
-    }, [language]);
 
     const startGame = useCallback((mode: GameMode) => {
         setGameMode(mode);
@@ -186,7 +206,9 @@ const App: React.FC = () => {
         onSelectLanguage: handleLanguageSelected,
         onCloseHelpModal: handleCloseHelpModal,
         handleAuthentication,
-    }), [wgt, startGame, quitGame, showAchievements, showRanking, t, language, isLanguageModalOpen, isHelpModalOpen, walletAddress, theme, authState, handleAuthentication]);
+        notification,
+        showNotification,
+    }), [wgt, startGame, quitGame, showAchievements, showRanking, t, language, isLanguageModalOpen, isHelpModalOpen, walletAddress, theme, authState, handleAuthentication, notification, showNotification]);
 
     const renderContent = () => {
         if (authState !== 'verified') {
@@ -214,6 +236,7 @@ const App: React.FC = () => {
             </div>
             <LanguageSelectionModal isOpen={isLanguageModalOpen} />
             <HelpModal isOpen={isHelpModalOpen} onClose={handleCloseHelpModal} />
+            <NotificationModal isOpen={!!notification} onClose={hideNotification} />
         </GameContext.Provider>
     );
 };

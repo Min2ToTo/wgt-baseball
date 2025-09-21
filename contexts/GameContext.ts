@@ -1,5 +1,5 @@
 import { createContext, useContext, Dispatch, SetStateAction } from 'react';
-import { GameMode, Language, Theme, AuthState } from '../types';
+import { GameMode, Language, Theme, AuthState, NotificationState } from '../types';
 
 export interface GameContextType {
     wgt: number;
@@ -23,6 +23,8 @@ export interface GameContextType {
     onSelectLanguage: (lang: Language) => void;
     onCloseHelpModal: () => void;
     handleAuthentication: () => Promise<void>;
+    notification: NotificationState | null;
+    showNotification: (notification: Omit<NotificationState, 'isOpen'>) => void;
 }
 
 export const GameContext = createContext<GameContextType | undefined>(undefined);

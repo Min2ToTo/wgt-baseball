@@ -15,47 +15,30 @@ const WorldIdIcon: React.FC = () => (
     </svg>
 );
 
-const ErrorIcon: React.FC = () => (
-     <svg className="h-10 w-10 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-);
-
 export const AuthScreen: React.FC = () => {
     const { t, authState, handleAuthentication } = useGame();
 
     const renderContent = () => {
-        switch (authState) {
-            case 'loading':
-                return (
-                    <>
-                        <LoadingSpinner />
-                        <p className="mt-4 text-text-muted">{t('auth.connecting')}</p>
-                    </>
-                );
-            case 'error':
-                 return (
-                    <>
-                        <ErrorIcon />
-                        <p className="mt-4 text-danger">{t('auth.error')}</p>
-                        <Button onClick={handleAuthentication} className="mt-6">
-                            {t('auth.retry')}
-                        </Button>
-                    </>
-                );
-            case 'unverified':
-            default:
-                return (
-                     <>
-                        <WorldIdIcon />
-                        <h2 className="text-xl font-bold mt-6">{t('auth.verifyTitle')}</h2>
-                        <p className="mt-2 text-text-muted">{t('auth.verifyDescription')}</p>
-                        <Button onClick={handleAuthentication} className="mt-8 w-full">
-                            {t('auth.verifyAction')}
-                        </Button>
-                    </>
-                );
+        if (authState === 'loading') {
+            return (
+                <>
+                    <LoadingSpinner />
+                    <p className="mt-4 text-text-muted">{t('auth.connecting')}</p>
+                </>
+            );
         }
+        
+        // Default 'unverified' state
+        return (
+             <>
+                <WorldIdIcon />
+                <h2 className="text-xl font-bold mt-6">{t('auth.verifyTitle')}</h2>
+                <p className="mt-2 text-text-muted">{t('auth.verifyDescription')}</p>
+                <Button onClick={handleAuthentication} className="mt-8 w-full">
+                    {t('auth.verifyAction')}
+                </Button>
+            </>
+        );
     };
 
     return (
