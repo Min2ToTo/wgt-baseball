@@ -16,5 +16,13 @@ export default defineConfig({
       '.loca.lt',
       '.ngrok-free.app',
     ],
-  }
+  },
+  build: {
+    rollupOptions: {
+      // This tells Vite/Rollup not to bundle `@worldcoin/minikit-js`
+      // because it will be provided by the importmap in index.html at runtime.
+      // This resolves the "failed to resolve import" build error.
+      external: ['@worldcoin/minikit-js'],
+    },
+  },
 })
