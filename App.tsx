@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { GameScreen } from './components/GameScreen';
 import { MainScreen } from './components/MainScreen';
@@ -41,6 +42,7 @@ const App: React.FC = () => {
     const [theme, setTheme] = useState<Theme>('light');
     const [isLoading, setIsLoading] = useState(true);
     const [isStandaloneMode, setIsStandaloneMode] = useState(false);
+    const [authStatusMessage, setAuthStatusMessage] = useState('Connecting to World App...');
 
     // World ID and Assets
     const [walletAddress, setWalletAddress] = useState<string | null>(null);
@@ -73,11 +75,14 @@ const App: React.FC = () => {
                 const user = await window.worldapp!.getUser();
                 if (user?.isVerified && user.worldIdAddress) {
                     setWalletAddress(user.worldIdAddress);
+                    setAuthStatusMessage('User verified successfully!');
                 } else {
                     console.log("[AUTH] User is not verified with World ID or not logged in.");
+                    setAuthStatusMessage('Please verify with World ID in World App to play.');
                 }
             } catch (error) {
                 console.error("[AUTH] Error initializing World App bridge:", error);
+                setAuthStatusMessage('An error occurred during verification.');
             } finally {
                 setIsLoading(false);
             }
@@ -86,14 +91,19 @@ const App: React.FC = () => {
         const checkForBridge = () => {
             if (typeof window.worldapp !== 'undefined') {
                 console.log("[AUTH] World App bridge found. Initializing...");
+                setAuthStatusMessage('World App connection successful. Verifying user...');
                 initializeWorldApp();
             } else {
                 attempt++;
                 if (attempt < MAX_RETRIES) {
-                    console.log(`[AUTH] World App bridge not found. Retrying... (Attempt ${attempt})`);
+                    const msg = `World App not found. Retrying... (Attempt ${attempt}/${MAX_RETRIES})`;
+                    console.log(`[AUTH] ${msg}`);
+                    setAuthStatusMessage(msg);
                     setTimeout(checkForBridge, RETRY_DELAY);
                 } else {
-                    console.warn(`[AUTH] World App bridge not found after ${MAX_RETRIES} attempts. Running in standalone debug mode.`);
+                    const msg = `Could not connect to World App after ${MAX_RETRIES} attempts.`;
+                    console.warn(`[AUTH] ${msg} Running in standalone debug mode.`);
+                    setAuthStatusMessage(msg);
                     setIsStandaloneMode(true);
                     setWalletAddress('0xDEBUG000000000000000000000000000000000000');
                     setIsLoading(false);
@@ -102,6 +112,7 @@ const App: React.FC = () => {
         };
         
         console.log("[AUTH] Starting authentication process...");
+        setAuthStatusMessage('Connecting to World App...');
         checkForBridge();
 
         return () => {
@@ -215,16 +226,24 @@ const App: React.FC = () => {
                 {t('common.title')}
             </h1>
             {isLoading ? (
-                <p className="my-8 text-text-muted">Connecting to World App...</p>
+                <div className="my-8 flex flex-col items-center gap-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+                    <p className="text-text-muted">{authStatusMessage}</p>
+                </div>
             ) : isStandaloneMode ? (
-                 <p className="my-8 text-text-muted">
-                    {t('main.standalone.line1')}
-                    <br/>
-                    {t('main.standalone.line2')}
-                </p>
+                 <div className="my-8 w-full">
+                    <div className="p-3 bg-danger/10 border border-danger text-danger rounded-lg mb-4">
+                        <p className="font-bold text-sm">{authStatusMessage}</p>
+                    </div>
+                    <p className="text-text-muted">
+                        {t('main.standalone.line1')}
+                        <br/>
+                        {t('main.standalone.line2')}
+                    </p>
+                </div>
             ) : (
                 <p className="my-8 text-text-muted">
-                    Please verify with World ID in World App to play.
+                    {authStatusMessage}
                 </p>
             )}
         </div>
