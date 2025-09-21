@@ -78,28 +78,47 @@ const App: React.FC = () => {
     }, [isOnboarding]);
 
     const handleAuthentication = useCallback(async () => {
+        console.log('[AUTH] Starting authentication process...');
+        const MIN_LOADING_TIME = 1500; // 1.5 seconds
+        const startTime = Date.now();
+
         if (!MiniKit.isInstalled()) {
-            console.warn("MiniKit not found. Running in standalone debug mode.");
-            showNotification({
-                type: 'success',
-                title: 'Debug Mode',
-                message: 'Successfully connected in debug mode.',
-                onConfirm: () => {
-                     setWalletAddress('0xDEBUG000000000000000000000000000000000000');
-                     handleVerificationSuccess();
-                }
-            });
+            console.warn("[AUTH] MiniKit not found. Running in standalone debug mode.");
+            setAuthState('loading');
+            
+            // Simulate loading time for debug mode as well
+            setTimeout(() => {
+                showNotification({
+                    type: 'success',
+                    title: 'Debug Mode',
+                    message: 'Successfully connected in debug mode.',
+                    onConfirm: () => {
+                         setWalletAddress('0xDEBUG000000000000000000000000000000000000');
+                         handleVerificationSuccess();
+                    }
+                });
+            }, MIN_LOADING_TIME);
             return;
         }
 
         setAuthState('loading');
         try {
-            const { finalPayload } = await MiniKit.commandsAsync.verify({
+            console.log('[AUTH] Calling MiniKit.commandsAsync.verify...');
+            
+            const verificationPromise = MiniKit.commandsAsync.verify({
                 action: WORLD_ID_ACTION_IDENTIFIER,
                 verification_level: VerificationLevel.Orb,
             });
 
+            const timerPromise = new Promise(resolve => setTimeout(resolve, MIN_LOADING_TIME));
+
+            // Wait for both verification and minimum timer to complete
+            const [{ finalPayload }] = await Promise.all([verificationPromise, timerPromise]);
+
+            console.log('[AUTH] Received payload from MiniKit:', finalPayload);
+
             if (finalPayload.status === 'success' && finalPayload.proof) {
+                console.log('[AUTH] Verification SUCCESSFUL. Proof received.');
                 setWalletAddress(finalPayload.nullifier_hash); 
                 showNotification({
                     type: 'success',
@@ -108,7 +127,7 @@ const App: React.FC = () => {
                     onConfirm: handleVerificationSuccess,
                 });
             } else {
-                console.error('Verification failed or was cancelled.', finalPayload);
+                console.error('[AUTH] Verification FAILED or was cancelled.', finalPayload);
                 showNotification({
                     type: 'error',
                     title: t('notification.verificationErrorTitle'),
@@ -117,13 +136,19 @@ const App: React.FC = () => {
                 setAuthState('unverified');
             }
         } catch (error) {
-            console.error("Error during MiniKit verification:", error);
-             showNotification({
-                type: 'error',
-                title: t('notification.verificationErrorTitle'),
-                message: t('notification.verificationErrorMessage'),
-            });
-            setAuthState('unverified');
+            const elapsedTime = Date.now() - startTime;
+            const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsedTime);
+
+            console.error("[AUTH] An unexpected error occurred during MiniKit verification:", error);
+            
+            setTimeout(() => {
+                 showNotification({
+                    type: 'error',
+                    title: t('notification.verificationErrorTitle'),
+                    message: t('notification.verificationErrorMessage'),
+                });
+                setAuthState('unverified');
+            }, remainingTime);
         }
     }, [t, handleVerificationSuccess, showNotification]);
 
