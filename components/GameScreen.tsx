@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState } from 'react';
 import { useGameLogic } from '../hooks/useGameLogic';
 import { GameMode, GuessResult } from '../types';
