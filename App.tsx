@@ -1,17 +1,36 @@
+
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { GameScreen } from './components/GameScreen';
 import { MainScreen } from './components/MainScreen';
 import { GameContext, GameContextType } from './contexts/GameContext';
-import { GameMode, Language, Theme, AuthState, NotificationState } from './types';
+import { GameMode, Language, Theme } from './types';
 import { translations } from './i18n/translations';
 import { LanguageSelectionModal } from './components/modals/LanguageSelectionModal';
 import { HelpModal } from './components/modals/HelpModal';
+import { ethers } from 'ethers';
 import { AchievementsScreen } from './components/AchievementsScreen';
 import { RankingScreen } from './components/RankingScreen';
-import { AuthScreen } from './components/AuthScreen';
-import { WORLD_ID_ACTION_IDENTIFIER } from './constants';
-import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js';
-import { NotificationModal } from './components/modals/NotificationModal';
+
+// World App Bridge type definition (simplified)
+declare global {
+    interface Window {
+        worldapp?: {
+            getUser: () => Promise<{ isVerified: boolean; worldIdAddress: string | null; } | null>;
+            theme: {
+                subscribe: (callback: (theme: 'light' | 'dark') => void) => () => void;
+            };
+        }
+    }
+}
+
+// TODO: Replace with your actual deployed contract address and ABI
+const WGT_CONTRACT_ADDRESS = '0x0000000000000000000000000000000000000000'; // Using a placeholder address
+const WGT_CONTRACT_ABI = [
+    // A minimal ABI for balanceOf
+    "function balanceOf(address owner) view returns (uint256)"
+];
+// TODO: Replace with a valid RPC URL (e.g., from Alchemy or Infura for the correct network)
+const RPC_URL = 'https://rpc.sepolia.org'; // Example public RPC for Sepolia testnet
 
 const App: React.FC = () => {
     const [screen, setScreen] = useState<'main' | 'game' | 'achievements' | 'ranking'>('main');
@@ -20,19 +39,109 @@ const App: React.FC = () => {
     const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const [theme, setTheme] = useState<Theme>('light');
-    
-    // Authentication & User Data
-    const [authState, setAuthState] = useState<AuthState>('unverified');
+    const [isLoading, setIsLoading] = useState(true);
+    const [isStandaloneMode, setIsStandaloneMode] = useState(false);
+
+    // World ID and Assets
     const [walletAddress, setWalletAddress] = useState<string | null>(null);
     const [wgt, setWgt] = useState(0);
-
-    // Notification State
-    const [notification, setNotification] = useState<NotificationState | null>(null);
-
-    // Onboarding State
-    const [isOnboarding, setIsOnboarding] = useState(false);
     
-    // FIX: Moved `t` function definition before its use to resolve block-scoped variable error.
+    useEffect(() => {
+        const savedLang = localStorage.getItem('wgt-baseball-lang') as Language;
+        if (savedLang && translations[savedLang]) {
+            setLanguage(savedLang);
+        } else {
+            setIsLanguageModalOpen(true);
+        }
+    }, []);
+
+    // World App Integration Effect
+    useEffect(() => {
+        const MAX_RETRIES = 10;
+        const RETRY_DELAY = 300; // ms
+        let attempt = 0;
+        let themeUnsubscribe: (() => void) | undefined;
+
+        const initializeWorldApp = async () => {
+            try {
+                // Subscribe to theme changes
+                themeUnsubscribe = window.worldapp!.theme.subscribe((newTheme) => {
+                    setTheme(newTheme === 'dark' ? 'dark' : 'light');
+                });
+
+                // Get user data
+                const user = await window.worldapp!.getUser();
+                if (user?.isVerified && user.worldIdAddress) {
+                    setWalletAddress(user.worldIdAddress);
+                } else {
+                    console.log("[AUTH] User is not verified with World ID or not logged in.");
+                }
+            } catch (error) {
+                console.error("[AUTH] Error initializing World App bridge:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        const checkForBridge = () => {
+            if (typeof window.worldapp !== 'undefined') {
+                console.log("[AUTH] World App bridge found. Initializing...");
+                initializeWorldApp();
+            } else {
+                attempt++;
+                if (attempt < MAX_RETRIES) {
+                    console.log(`[AUTH] World App bridge not found. Retrying... (Attempt ${attempt})`);
+                    setTimeout(checkForBridge, RETRY_DELAY);
+                } else {
+                    console.warn(`[AUTH] World App bridge not found after ${MAX_RETRIES} attempts. Running in standalone debug mode.`);
+                    setIsStandaloneMode(true);
+                    setWalletAddress('0xDEBUG000000000000000000000000000000000000');
+                    setIsLoading(false);
+                }
+            }
+        };
+        
+        console.log("[AUTH] Starting authentication process...");
+        checkForBridge();
+
+        return () => {
+            if (themeUnsubscribe) {
+                themeUnsubscribe();
+            }
+        };
+    }, []);
+    
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('wgt-baseball-theme', theme);
+    }, [theme]);
+
+    // Fetch user balances when wallet address is available
+    useEffect(() => {
+        if (!walletAddress) return;
+
+        const fetchBalances = async () => {
+            console.log(`Attempting to fetch balances for ${walletAddress}...`);
+            try {
+                const provider = new ethers.JsonRpcProvider(RPC_URL);
+                const contract = new ethers.Contract(WGT_CONTRACT_ADDRESS, WGT_CONTRACT_ABI, provider);
+                const wgtBalance = await contract.balanceOf(walletAddress);
+                const formattedBalance = Number(ethers.formatUnits(wgtBalance, 18));
+                
+                console.log('Successfully fetched balance from contract:', formattedBalance);
+                setWgt(formattedBalance);
+
+            } catch (error) {
+                console.error("Could not fetch balance from contract. This is expected if the contract address and RPC URL are placeholders.", error);
+                console.log("Falling back to mock data for MVP.");
+                // For this MVP simulation with a new user / if contract call fails:
+                setWgt(150); 
+            }
+        };
+
+        fetchBalances();
+    }, [walletAddress]);
+
     const t = useCallback((key: string, params?: { [key: string]: string | number }) => {
         const keys = key.split('.');
         let result: any = translations[language];
@@ -45,9 +154,17 @@ const App: React.FC = () => {
             result = result[Math.floor(Math.random() * result.length)];
         }
 
-        if (typeof result !== 'string') {
-             console.error(`Translation for key '${key}' is not a string.`);
+        if (typeof result !== 'string' && typeof result !== 'object') {
+             console.error(`Translation for key '${key}' is not a string or object.`);
              return key;
+        }
+        
+        if (typeof result === 'object' && result !== null) {
+            // If the result is an object, it's likely a structured message.
+            // Returning it as-is or a formatted string might be necessary depending on usage.
+            // For now, let's just return the key as a fallback for objects.
+            console.warn(`Translation for key '${key}' is an object, which is not directly renderable as a string.`);
+            return key;
         }
 
         if (params) {
@@ -58,143 +175,6 @@ const App: React.FC = () => {
         
         return result;
     }, [language]);
-
-    const showNotification = useCallback((notificationDetails: Omit<NotificationState, 'isOpen'>) => {
-        setNotification({ ...notificationDetails, isOpen: true });
-    }, []);
-
-    const hideNotification = () => {
-        if (notification?.onConfirm) {
-            notification.onConfirm();
-        }
-        setNotification(null);
-    };
-    
-    const handleVerificationSuccess = useCallback(() => {
-        setAuthState('verified');
-        if (isOnboarding) {
-            setIsHelpModalOpen(true);
-        }
-    }, [isOnboarding]);
-
-    const handleAuthentication = useCallback(async () => {
-        console.log('[AUTH] Starting authentication process...');
-        const MIN_LOADING_TIME = 1500; // 1.5 seconds
-        const startTime = Date.now();
-
-        if (!MiniKit.isInstalled()) {
-            console.warn("[AUTH] MiniKit not found. Running in standalone debug mode.");
-            setAuthState('loading');
-            
-            // Simulate loading time for debug mode as well
-            setTimeout(() => {
-                showNotification({
-                    type: 'success',
-                    title: 'Debug Mode',
-                    message: 'Successfully connected in debug mode.',
-                    onConfirm: () => {
-                         setWalletAddress('0xDEBUG000000000000000000000000000000000000');
-                         handleVerificationSuccess();
-                    }
-                });
-            }, MIN_LOADING_TIME);
-            return;
-        }
-
-        setAuthState('loading');
-        try {
-            console.log('[AUTH] Calling MiniKit.commandsAsync.verify...');
-            
-            const verificationPromise = MiniKit.commandsAsync.verify({
-                action: WORLD_ID_ACTION_IDENTIFIER,
-                verification_level: VerificationLevel.Orb,
-            });
-
-            const timerPromise = new Promise(resolve => setTimeout(resolve, MIN_LOADING_TIME));
-
-            // Wait for both verification and minimum timer to complete
-            const [{ finalPayload }] = await Promise.all([verificationPromise, timerPromise]);
-
-            console.log('[AUTH] Received payload from MiniKit:', finalPayload);
-
-            if (finalPayload.status === 'success' && finalPayload.proof) {
-                console.log('[AUTH] Verification SUCCESSFUL. Proof received.');
-                setWalletAddress(finalPayload.nullifier_hash); 
-                showNotification({
-                    type: 'success',
-                    title: t('notification.verificationSuccessTitle'),
-                    message: t('notification.verificationSuccessMessage'),
-                    onConfirm: handleVerificationSuccess,
-                });
-            } else {
-                console.error('[AUTH] Verification FAILED or was cancelled.', finalPayload);
-                showNotification({
-                    type: 'error',
-                    title: t('notification.verificationErrorTitle'),
-                    message: t('notification.verificationErrorMessage'),
-                });
-                setAuthState('unverified');
-            }
-        } catch (error) {
-            const elapsedTime = Date.now() - startTime;
-            const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsedTime);
-
-            console.error("[AUTH] An unexpected error occurred during MiniKit verification:", error);
-            
-            setTimeout(() => {
-                 showNotification({
-                    type: 'error',
-                    title: t('notification.verificationErrorTitle'),
-                    message: t('notification.verificationErrorMessage'),
-                });
-                setAuthState('unverified');
-            }, remainingTime);
-        }
-    }, [t, handleVerificationSuccess, showNotification]);
-
-    useEffect(() => {
-        const savedLang = localStorage.getItem('wgt-baseball-lang') as Language;
-        const hasOnboarded = localStorage.getItem('wgt-baseball-onboarded') === 'true';
-
-        if (savedLang && translations[savedLang]) {
-            setLanguage(savedLang);
-        } else {
-            setIsOnboarding(true);
-            setIsLanguageModalOpen(true);
-        }
-
-        const themeUnsubscribe = MiniKit.subscribe('theme', (newTheme) => {
-            setTheme(newTheme.theme === 'dark' ? 'dark' : 'light');
-        });
-
-        return () => {
-           themeUnsubscribe();
-        };
-    }, []);
-    
-    useEffect(() => {
-        document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('wgt-baseball-theme', theme);
-    }, [theme]);
-
-    useEffect(() => {
-        if (!walletAddress) return;
-        setWgt(150);
-    }, [walletAddress]);
-    
-    const handleLanguageSelected = (lang: Language) => {
-        setLanguage(lang);
-        localStorage.setItem('wgt-baseball-lang', lang);
-        setIsLanguageModalOpen(false);
-    };
-
-    const handleCloseHelpModal = () => {
-        setIsHelpModalOpen(false);
-        if (isOnboarding) {
-            localStorage.setItem('wgt-baseball-onboarded', 'true');
-            setIsOnboarding(false);
-        }
-    };
 
     const startGame = useCallback((mode: GameMode) => {
         setGameMode(mode);
@@ -224,20 +204,35 @@ const App: React.FC = () => {
         isHelpModalOpen,
         setIsHelpModalOpen,
         walletAddress,
-        isAuthenticated: authState === 'verified',
+        isAuthenticated: !!walletAddress,
         theme,
         setTheme,
-        authState,
-        onSelectLanguage: handleLanguageSelected,
-        onCloseHelpModal: handleCloseHelpModal,
-        handleAuthentication,
-        notification,
-        showNotification,
-    }), [wgt, startGame, quitGame, showAchievements, showRanking, t, language, isLanguageModalOpen, isHelpModalOpen, walletAddress, theme, authState, handleAuthentication, notification, showNotification]);
+    }), [wgt, startGame, quitGame, showAchievements, showRanking, t, language, isLanguageModalOpen, isHelpModalOpen, walletAddress, theme]);
+
+    const PreloadView = () => (
+        <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+             <h1 className="text-4xl font-bold text-center font-orbitron">
+                {t('common.title')}
+            </h1>
+            {isLoading ? (
+                <p className="my-8 text-text-muted">Connecting to World App...</p>
+            ) : isStandaloneMode ? (
+                 <p className="my-8 text-text-muted">
+                    {t('main.standalone.line1')}
+                    <br/>
+                    {t('main.standalone.line2')}
+                </p>
+            ) : (
+                <p className="my-8 text-text-muted">
+                    Please verify with World ID in World App to play.
+                </p>
+            )}
+        </div>
+    );
 
     const renderContent = () => {
-        if (authState !== 'verified') {
-            return <AuthScreen />;
+        if (!walletAddress) {
+            return <PreloadView />;
         }
         switch (screen) {
             case 'game':
@@ -260,8 +255,7 @@ const App: React.FC = () => {
                 </div>
             </div>
             <LanguageSelectionModal isOpen={isLanguageModalOpen} />
-            <HelpModal isOpen={isHelpModalOpen} onClose={handleCloseHelpModal} />
-            <NotificationModal isOpen={!!notification} onClose={hideNotification} />
+            <HelpModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
         </GameContext.Provider>
     );
 };
