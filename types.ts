@@ -5,7 +5,7 @@ export interface GuessResult {
     strikes: number;
 }
 
-export type GameMode = 'daily' | 'practice';
+export type GameMode = 'challenge' | 'practice';
 export type GameResult = 'homerun' | 'strikeout' | null;
 
 export type AchievementStatus = 'locked' | 'claimable' | 'claimed';

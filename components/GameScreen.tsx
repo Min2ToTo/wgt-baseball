@@ -86,7 +86,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ mode }) => {
     
     const handleConfirmGiveUp = () => {
         const cost = hintsUsed * HINT_COST;
-        if (mode === 'daily' && cost > 0) {
+        if (mode === 'challenge' && cost > 0) {
             setWgt(prev => Math.max(0, prev - cost));
         }
         setIsGiveUpModalOpen(false);
@@ -97,7 +97,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ mode }) => {
         <div className="p-4 flex flex-col h-full">
             <header className="flex justify-between items-center mb-2">
                 <div>
-                    <h2 className="text-xl font-bold">{mode === 'daily' ? t('game.dailyChallengeTitle') : t('game.practiceModeTitle')}</h2>
+                    <h2 className="text-xl font-bold">{mode === 'challenge' ? t('game.challengeModeTitle') : t('game.practiceModeTitle')}</h2>
                     <p className="text-sm text-text-muted">{t('game.inning', { inning: guesses.length + 1, max: MAX_GUESSES })}</p>
                 </div>
                 <Button onClick={() => setIsGiveUpModalOpen(true)} variant="danger" className="text-xs !py-1 !px-2">{t('game.giveUp')}</Button>
@@ -122,7 +122,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ mode }) => {
                         <Button onClick={useHint} disabled={mode === 'practice' || hintsUsed >= MAX_HINTS} className="text-xs !py-1 !px-2">
                             {t('game.useHint')}
                         </Button>
-                        { mode === 'daily' && <p className="text-xs text-text-muted mt-1">{t('game.hintCost', { count: HINT_COST })}</p> }
+                        { mode === 'challenge' && <p className="text-xs text-text-muted mt-1">{t('game.hintCost', { count: HINT_COST })}</p> }
                     </div>
                 </div>
                 
@@ -145,7 +145,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ mode }) => {
             <Modal isOpen={isGiveUpModalOpen} onClose={() => setIsGiveUpModalOpen(false)}>
                 <div className="text-center">
                     <h2 className="text-xl font-bold mb-4">{t('modal.giveUp.title')}</h2>
-                    <p>{mode === 'daily' ? t('modal.giveUp.message') : t('modal.giveUp.messagePractice')}</p>
+                    <p>{mode === 'challenge' ? t('modal.giveUp.message') : t('modal.giveUp.messagePractice')}</p>
                     <div className="flex justify-center gap-4 mt-6">
                         <Button variant="secondary" onClick={() => setIsGiveUpModalOpen(false)}>{t('common.cancel')}</Button>
                         <Button variant="danger" onClick={handleConfirmGiveUp}>{t('common.confirm')}</Button>

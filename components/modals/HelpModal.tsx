@@ -90,7 +90,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
                                 <div key={tier.inning} className="flex justify-between p-2 rounded-md bg-success/10">
                                     <span>{t('help.rewards.inning', { count: tier.inning })}</span>
                                     <span className="font-bold text-success">
-                                        {t('help.rewards.reward', { reward: tier.reward })}
+                                        {t('help.rewards.reward', { reward: tier.reward.toLocaleString() })}
                                     </span>
                                 </div>
                             ))}

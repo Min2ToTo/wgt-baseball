@@ -5,6 +5,7 @@ import { Modal } from './ui/Modal';
 import { SettingsModal } from './modals/SettingsModal';
 import { Language } from '../types';
 import { ethers } from 'ethers';
+import { CHALLENGE_MODE_COST } from '../constants';
 
 const LanguageSwitcher: React.FC = () => {
     const { language, setIsLanguageModalOpen } = useGame();
@@ -26,37 +27,6 @@ const LanguageSwitcher: React.FC = () => {
         </button>
     );
 };
-
-
-const DailyChallengeTimer: React.FC = () => {
-    const { t } = useGame();
-    const [timeLeft, setTimeLeft] = useState('');
-
-    useEffect(() => {
-        const timer = setInterval(() => {
-            const now = new Date();
-            const tomorrow = new Date(now);
-            tomorrow.setUTCHours(24, 0, 0, 0);
-            const diff = tomorrow.getTime() - now.getTime();
-
-            const hours = String(Math.floor((diff / (1000 * 60 * 60)) % 24)).padStart(2, '0');
-            const minutes = String(Math.floor((diff / 1000 / 60) % 60)).padStart(2, '0');
-            const seconds = String(Math.floor((diff / 1000) % 60)).padStart(2, '0');
-
-            setTimeLeft(`${hours}:${minutes}:${seconds}`);
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, []);
-
-    return (
-        <div className="text-center bg-surface-base p-2 rounded-lg mt-4">
-            <p className="text-sm text-text-muted">{t('main.remainingTime', { time: timeLeft })}</p>
-            <p className="text-lg font-bold text-accent font-orbitron">{timeLeft}</p>
-        </div>
-    );
-};
-
 
 const ReferralModal: React.FC<{isOpen: boolean, onClose: () => void}> = ({ isOpen, onClose }) => {
     const { t, walletAddress, setWgt } = useGame();
@@ -125,22 +95,61 @@ const ReferralModal: React.FC<{isOpen: boolean, onClose: () => void}> = ({ isOpe
 
 
 export const MainScreen: React.FC = () => {
-    const { wgt, startGame, t, setIsHelpModalOpen, showAchievements, showRanking } = useGame();
+    const { wgt, setWgt, startGame, t, setIsHelpModalOpen, showAchievements, showRanking } = useGame();
     const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+    
+    const FREE_PLAY_STORAGE_KEY = 'challengeModeLastFreePlay';
+    const [isFreePlayAvailable, setIsFreePlayAvailable] = useState(false);
+    const [nextFreePlayTime, setNextFreePlayTime] = useState('');
 
-    const [isDailyPlayed, setIsDailyPlayed] = useState(() => {
-        const lastPlayed = localStorage.getItem('dailyChallengeLastPlayed');
-        if (!lastPlayed) return false;
-        const lastDate = new Date(lastPlayed).getUTCDate();
-        const todayDate = new Date().getUTCDate();
-        return lastDate === todayDate;
-    });
+    useEffect(() => {
+        const checkFreePlay = () => {
+            const lastPlayedUTCString = localStorage.getItem(FREE_PLAY_STORAGE_KEY);
+            if (!lastPlayedUTCString) {
+                setIsFreePlayAvailable(true);
+                setNextFreePlayTime('');
+                return;
+            }
 
-    const handleStartDaily = () => {
-        localStorage.setItem('dailyChallengeLastPlayed', new Date().toUTCString());
-        setIsDailyPlayed(true);
-        startGame('daily');
+            const lastPlayedDate = new Date(lastPlayedUTCString);
+            const now = new Date();
+
+            if (lastPlayedDate.getUTCDate() !== now.getUTCDate() ||
+                lastPlayedDate.getUTCMonth() !== now.getUTCMonth() ||
+                lastPlayedDate.getUTCFullYear() !== now.getUTCFullYear()) {
+                setIsFreePlayAvailable(true);
+                setNextFreePlayTime('');
+            } else {
+                setIsFreePlayAvailable(false);
+                const tomorrowUTC = new Date();
+                tomorrowUTC.setUTCHours(24, 0, 0, 0);
+                const diff = tomorrowUTC.getTime() - now.getTime();
+
+                const hours = String(Math.floor((diff / (1000 * 60 * 60)) % 24)).padStart(2, '0');
+                const minutes = String(Math.floor((diff / 1000 / 60) % 60)).padStart(2, '0');
+                const seconds = String(Math.floor((diff / 1000) % 60)).padStart(2, '0');
+                setNextFreePlayTime(`${hours}:${minutes}:${seconds}`);
+            }
+        };
+
+        checkFreePlay();
+        const timer = setInterval(checkFreePlay, 1000);
+
+        return () => clearInterval(timer);
+    }, []);
+
+    const handleStartChallenge = () => {
+        if (isFreePlayAvailable) {
+            localStorage.setItem(FREE_PLAY_STORAGE_KEY, new Date().toUTCString());
+            setIsFreePlayAvailable(false);
+            startGame('challenge');
+        } else {
+            if (wgt >= CHALLENGE_MODE_COST) {
+                setWgt(prev => prev - CHALLENGE_MODE_COST);
+                startGame('challenge');
+            }
+        }
     };
     
     return (
@@ -166,18 +175,25 @@ export const MainScreen: React.FC = () => {
 
                 <div className="grid grid-cols-1 gap-4 mb-8 text-center">
                     <div className="bg-surface-base p-3 rounded-lg">
-                        <p className="font-bold text-lg text-accent">{wgt.toLocaleString()}</p>
+                        <p className="font-bold text-lg text-accent">{wgt.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</p>
                         <p className="text-xs text-text-muted">{t('common.wgt', { count: '' })}</p>
                     </div>
                 </div>
 
                 <div className="space-y-4">
                      <div className="bg-surface-inset p-4 rounded-lg text-center">
-                        <h2 className="text-xl font-bold">{t('main.dailyChallenge')}</h2>
-                        {isDailyPlayed ? (
-                             <DailyChallengeTimer />
-                        ) : (
-                             <Button onClick={handleStartDaily} className="mt-4 w-full">{t('main.play')}</Button>
+                        <h2 className="text-xl font-bold">{t('main.challengeMode')}</h2>
+                        <Button 
+                            onClick={handleStartChallenge} 
+                            className="mt-4 w-full"
+                            disabled={!isFreePlayAvailable && wgt < CHALLENGE_MODE_COST}
+                        >
+                            {isFreePlayAvailable ? t('main.playFree') : t('main.playCost', { cost: CHALLENGE_MODE_COST })}
+                        </Button>
+                        {!isFreePlayAvailable && nextFreePlayTime && (
+                            <div className="text-center bg-surface-base p-2 rounded-lg mt-4">
+                                 <p className="text-sm text-text-muted font-bold font-orbitron">{t('main.remainingTime', { time: nextFreePlayTime })}</p>
+                            </div>
                         )}
                     </div>
                     <div className="bg-surface-inset p-4 rounded-lg text-center">

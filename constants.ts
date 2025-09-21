@@ -3,16 +3,17 @@ export const SECRET_CODE_LENGTH = 3;
 export const MAX_GUESSES = 9;
 export const HINT_COST = 1; // Cost in WGT
 export const MAX_HINTS = 3;
+export const CHALLENGE_MODE_COST = 1;
 
-// Rewards for Daily Challenge based on inning of success
+// Rewards for Challenge Mode based on inning of success
 export const DAILY_CHALLENGE_WGT_REWARDS = [
     100,    // 1st inning
-    10,     // 2nd
-    5,      // 3rd
-    3,      // 4th
+    50,     // 2nd
+    10,     // 3rd
+    5,      // 4th
     2,      // 5th
-    1,      // 6th
-    1,      // 7th
-    1,      // 8th
-    1,      // 9th
+    0.8,    // 6th
+    0.5,    // 7th
+    0.2,    // 8th
+    0.1,    // 9th
 ];

@@ -18,10 +18,12 @@ const enTranslations: Translation = {
     error: "Could not connect to World App. Please try again later.",
   },
   main: {
-    dailyChallenge: "Daily Challenge",
+    challengeMode: "Challenge Mode",
     practiceMode: "Practice Mode",
-    play: "Play Now",
-    remainingTime: "Resets in {{time}}",
+    play: "Play",
+    playFree: "Play (Free)",
+    playCost: "Play ({{cost}} WGT)",
+    remainingTime: "Next free play in {{time}}",
     assets: "My Assets",
     referral: "Friend Referral",
     achievements: "Achievements",
@@ -33,7 +35,7 @@ const enTranslations: Translation = {
     useHint: "Use Hint",
     hintCost: "({{count}} WGT)",
     inning: "Inning {{inning}}/{{max}}",
-    dailyChallengeTitle: "Daily Challenge",
+    challengeModeTitle: "Challenge Mode",
     practiceModeTitle: "Practice Mode",
     hit_short: "H",
     foul_short: "F",
@@ -123,10 +125,10 @@ const enTranslations: Translation = {
     },
     currency: {
         title: "Currency Guide",
-        wgt: "WGT: A utility token used for in-game hints. Earn it by winning Daily Challenges or through friend referrals.",
+        wgt: "WGT: A utility token used for in-game hints. Earn it by winning Challenge Modes or through friend referrals.",
     },
     rewards: {
-        title: "Daily Challenge Rewards",
+        title: "Challenge Mode Rewards",
         description: "The fewer tries it takes to hit a homerun, the bigger the reward!",
         inning: "Success in {{count}} tries",
         reward: "+{{reward}} WGT",
@@ -146,11 +148,11 @@ const enTranslations: Translation = {
     },
     win100: {
         title: "Veteran Hitter",
-        description: "Win 100 Daily Challenges."
+        description: "Win 100 Challenge Modes."
     },
     perfectWeek: {
         title: "Hot Streak",
-        description: "Win the Daily Challenge 7 days in a row."
+        description: "Win the Challenge Mode 7 days in a row."
     }
   },
   ranking: {
@@ -184,10 +186,12 @@ const koTranslations: Translation = {
         error: "월드앱에 연결할 수 없습니다. 나중에 다시 시도해주세요.",
     },
     main: {
-      dailyChallenge: "오늘의 도전",
+      challengeMode: "도전 모드",
       practiceMode: "연습 모드",
       play: "플레이",
-      remainingTime: "{{time}} 후 초기화",
+      playFree: "플레이 (무료)",
+      playCost: "플레이 ({{cost}} WGT)",
+      remainingTime: "다음 무료 플레이까지 {{time}}",
       assets: "내 자산",
       referral: "친구 추천",
       achievements: "업적",
@@ -199,7 +203,7 @@ const koTranslations: Translation = {
       useHint: "힌트 사용",
       hintCost: "(WGT {{count}}개)",
       inning: "{{inning}} / {{max}}회",
-      dailyChallengeTitle: "오늘의 도전",
+      challengeModeTitle: "도전 모드",
       practiceModeTitle: "연습 모드",
       hit_short: "안타",
       foul_short: "파울",
@@ -283,10 +287,10 @@ const koTranslations: Translation = {
         },
         currency: {
             title: "게임 재화 안내",
-            wgt: "WGT: 게임 내 힌트를 사용하는 데 필요한 유틸리티 토큰입니다. 오늘의 도전에서 승리하거나 친구 추천으로 획득하세요.",
+            wgt: "WGT: 게임 내 힌트를 사용하는 데 필요한 유틸리티 토큰입니다. 도전 모드에서 승리하거나 친구 추천으로 획득하세요.",
         },
         rewards: {
-            title: "오늘의 도전 보상",
+            title: "도전 모드 보상",
             description: "더 적은 시도로 홈런을 칠수록 더 큰 보상을 받습니다!",
             inning: "{{count}}회 성공",
             reward: "+{{reward}} WGT",
@@ -306,11 +310,11 @@ const koTranslations: Translation = {
       },
       win100: {
           title: "베테랑 타자",
-          description: "오늘의 도전에서 100번 승리했습니다."
+          description: "도전 모드에서 100번 승리했습니다."
       },
       perfectWeek: {
           title: "연승 행진",
-          description: "7일 연속으로 오늘의 도전에 성공했습니다."
+          description: "7일 연속으로 도전 모드에 성공했습니다."
       }
     },
     ranking: {

@@ -1,0 +1,106 @@
+# dependencies
+/node_modules
+
+# production
+/dist
+
+# misc
+.DS_Store
+Thumbs.db
+
+# local env files
+.env
+.env.*
+!.env.example
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+
+# Node/Vite dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.next/
+out/
+coverage/
+
+# Local env files (보안)
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.log
+
+# Editor & IDE
+.vscode/
+.idea/
+.history/
+.swp
+.swo
+.sublime*
+*.code-workspace
+
+# OS generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+Desktop.ini
+
+# Test & coverage
+coverage/
+.nyc_output/
+jest-html-reporters-*
+
+# Misc
+*.local
+*.cache
+.parcel-cache/
+.eslintcache
+.turbo/
+.vercel/
+.firebase/
+.netlify/
+.tmp/
+tmp/
+temp/
+
+# Sensitive files
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.cert
+*.csr
+*.der
+*.jks
+*.keystore
+*.ovpn
+*.gpg
+*.asc
+
+# System
+*.bak
+*.old
+*.orig
+*.swp
+*.swo
+
+# Ignore lock files if not needed (uncomment if desired)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml

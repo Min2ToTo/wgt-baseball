@@ -24,11 +24,11 @@ export const ResultModal: React.FC<ResultModalProps> = ({ result, mode, secretCo
         if (!result) return;
 
         let reward = 0;
-        if (isHomerun && mode === 'daily') {
+        if (isHomerun && mode === 'challenge') {
             reward = DAILY_CHALLENGE_WGT_REWARDS[inningIndex] ?? 0;
         }
         
-        const cost = mode === 'daily' ? hintsUsed * HINT_COST : 0;
+        const cost = mode === 'challenge' ? hintsUsed * HINT_COST : 0;
         const netWgtChange = reward - cost;
 
         if (netWgtChange !== 0) {
@@ -42,7 +42,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({ result, mode, secretCo
     const title = isHomerun ? t('modal.result.homerun') : t('modal.result.strikeout');
     
     let reward = 0;
-    if (isHomerun && mode === 'daily') {
+    if (isHomerun && mode === 'challenge') {
         reward = DAILY_CHALLENGE_WGT_REWARDS[inningIndex] ?? 0;
     }
 
@@ -52,7 +52,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({ result, mode, secretCo
                 <h2 className={`text-3xl font-bold mb-4 ${isHomerun ? 'text-success' : 'text-danger'}`}>{title}</h2>
                 <p className="mb-2">{isHomerun ? t('modal.result.congrats') : t('modal.result.nextTime')}</p>
                 
-                {isHomerun && mode === 'daily' && (
+                {isHomerun && mode === 'challenge' && (
                     <div className="my-6 p-4 bg-surface-base rounded-lg space-y-3">
                          <div className="flex justify-between items-center">
                             <span className="text-text-muted">{t('modal.result.totalWinnings')}</span>

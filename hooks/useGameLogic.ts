@@ -35,13 +35,13 @@ export const useGameLogic = (mode: GameMode) => {
         setRevealedHints([]);
         setHintsUsed(0);
         setCommentary(t('commentary.ready'));
-        if (mode === 'daily') {
+        if (mode === 'challenge') {
             localStorage.removeItem(storageKey);
         }
     }, [storageKey, t, mode]);
 
     useEffect(() => {
-        if (mode === 'daily') {
+        if (mode === 'challenge') {
             const savedGame = localStorage.getItem(storageKey);
             if (savedGame) {
                 const { secretCode, guesses, revealedHints, hintsUsed } = JSON.parse(savedGame);
@@ -60,7 +60,7 @@ export const useGameLogic = (mode: GameMode) => {
     }, [mode, resetGame]);
 
     useEffect(() => {
-        if (mode === 'daily' && secretCode.length > 0 && !gameResult) {
+        if (mode === 'challenge' && secretCode.length > 0 && !gameResult) {
             const gameState = JSON.stringify({ secretCode, guesses, revealedHints, hintsUsed });
             localStorage.setItem(storageKey, gameState);
         }
@@ -89,12 +89,12 @@ export const useGameLogic = (mode: GameMode) => {
         if (hits === SECRET_CODE_LENGTH) {
             setGameResult('homerun');
             setCommentary(t('commentary.dynamic.homerun'));
-            if(mode === 'daily') localStorage.removeItem(storageKey);
+            if(mode === 'challenge') localStorage.removeItem(storageKey);
         } else {
             if (newGuesses.length >= MAX_GUESSES) {
                 setGameResult('strikeout');
                 setCommentary(t('commentary.dynamic.strikeout'));
-                if(mode === 'daily') localStorage.removeItem(storageKey);
+                if(mode === 'challenge') localStorage.removeItem(storageKey);
             } else if (strikes > 0) {
                  setCommentary(t('commentary.dynamic.strike'));
             } else if (fouls === 3) {
@@ -114,7 +114,7 @@ export const useGameLogic = (mode: GameMode) => {
     }, [currentGuess, secretCode, guesses, gameResult, storageKey, t, mode]);
 
     const useHint = useCallback(() => {
-        if (mode !== 'daily' || gameResult) return;
+        if (mode !== 'challenge' || gameResult) return;
 
         if (wgt < HINT_COST) {
             setCommentary(t('commentary.notEnoughWgt'));
