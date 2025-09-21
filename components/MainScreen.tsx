@@ -10,12 +10,8 @@ const LanguageSwitcher: React.FC = () => {
     const { language, setIsLanguageModalOpen } = useGame();
 
     const languages: { code: Language; flag: string }[] = [
-        { code: 'en', flag: '🇺🇸' }, { code: 'ru', flag: '🇷🇺' }, { code: 'ar', flag: '🇸🇦' },
-        { code: 'es', flag: '🇪🇸' }, { code: 'pt', flag: '🇧🇷' }, { code: 'fr', flag: '🇫🇷' },
-        { code: 'hi', flag: '🇮🇳' }, { code: 'ur', flag: '🇵🇰' }, { code: 'bn', flag: '🇧🇩' }, 
-        { code: 'id', flag: '🇮🇩' }, { code: 'am', flag: '🇪🇹' }, { code: 'ja', flag: '🇯🇵' }, 
-        { code: 'zh', flag: '🇨🇳' }, { code: 'tl', flag: '🇵🇭' }, { code: 'vi', flag: '🇻🇳' }, 
-        { code: 'ko', flag: '🇰🇷' }, { code: 'de', flag: '🇩🇪' },
+        { code: 'en', flag: '🇺🇸' },
+        { code: 'ko', flag: '🇰🇷' },
     ];
 
     const currentFlag = languages.find(l => l.code === language)?.flag;

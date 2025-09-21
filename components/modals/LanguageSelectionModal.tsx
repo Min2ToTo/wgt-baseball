@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useGame } from '../../contexts/GameContext';
 import { Modal } from '../ui/Modal';
@@ -6,22 +5,7 @@ import { LanguageOption, Language } from '../../types';
 
 const languageOptions: LanguageOption[] = [
     { code: 'en', nativeName: 'English', flag: '🇺🇸' },
-    { code: 'es', nativeName: 'Español', flag: '🇪🇸' },
-    { code: 'de', nativeName: 'Deutsch', flag: '🇩🇪' },
-    { code: 'fr', nativeName: 'Français', flag: '🇫🇷' },
-    { code: 'pt', nativeName: 'Português', flag: '🇧🇷' },
-    { code: 'ru', nativeName: 'Русский', flag: '🇷🇺' },
-    { code: 'ja', nativeName: '日本語', flag: '🇯🇵' },
     { code: 'ko', nativeName: '한국어', flag: '🇰🇷' },
-    { code: 'zh', nativeName: '中文 (简体)', flag: '🇨🇳' },
-    { code: 'hi', nativeName: 'हिन्दी', flag: '🇮🇳' },
-    { code: 'ar', nativeName: 'العربية', flag: '🇸🇦' },
-    { code: 'bn', nativeName: 'বাংলা', flag: '🇧🇩' },
-    { code: 'ur', nativeName: 'اردو', flag: '🇵🇰' },
-    { code: 'id', nativeName: 'Bahasa Indonesia', flag: '🇮🇩' },
-    { code: 'vi', nativeName: 'Tiếng Việt', flag: '🇻🇳' },
-    { code: 'tl', nativeName: 'Filipino', flag: '🇵🇭' },
-    { code: 'am', nativeName: 'አማርኛ', flag: '🇪🇹' },
 ];
 
 interface LanguageSelectionModalProps {
@@ -33,7 +17,7 @@ export const LanguageSelectionModal: React.FC<LanguageSelectionModalProps> = ({ 
 
     const handleSelectLanguage = (langCode: Language) => {
         setLanguage(langCode);
-        localStorage.setItem('wld-baseball-lang', langCode);
+        localStorage.setItem('wgt-baseball-lang', langCode);
         setIsLanguageModalOpen(false);
     };
 

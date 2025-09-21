@@ -28,10 +28,7 @@ export interface RankEntry {
 
 export type Theme = 'light' | 'dark' | 'dusk' | 'sakura';
 
-export type Language = 
-  | 'en' | 'es' | 'pt' | 'fr' | 'ru' | 'ar' 
-  | 'hi' | 'ur' | 'bn' | 'id' | 'am' | 'ja' 
-  | 'zh' | 'tl' | 'vi' | 'ko' | 'de';
+export type Language = 'en' | 'ko';
 
 export type AuthState = 'loading' | 'unverified' | 'verified' | 'error';
 
@@ -47,20 +44,5 @@ export interface Translation {
 
 export interface Translations {
   en: Translation;
-  es: Translation;
-  pt: Translation;
-  fr: Translation;
-  ru: Translation;
-  ar: Translation;
-  hi: Translation;
-  ur: Translation;
-  bn: Translation;
-  id: Translation;
-  am: Translation;
-  ja: Translation;
-  zh: Translation;
-  tl: Translation;
-  vi: Translation;
   ko: Translation;
-  de: Translation;
 }

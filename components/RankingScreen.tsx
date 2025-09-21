@@ -18,17 +18,17 @@ const homerunsRanking: RankEntry[] = [
     { rank: 3, player: 'SultanOfSwat', record: '98 HRs', reward: '250 WGT' },
 ];
 
-const RankingRow: React.FC<{ entry: RankEntry }> = ({ entry }) => {
-    const getRankIcon = (rank: number) => {
-        if (rank === 1) return '🥇';
-        if (rank === 2) return '🥈';
-        if (rank === 3) return '🥉';
-        return <span className="font-bold">{rank}</span>;
-    };
+const RankIcon: React.FC<{ rank: number }> = ({ rank }) => {
+    if (rank === 1) return <>🥇</>;
+    if (rank === 2) return <>🥈</>;
+    if (rank === 3) return <>🥉</>;
+    return <span className="font-bold">{rank}</span>;
+};
 
+const RankingRow: React.FC<{ entry: RankEntry }> = ({ entry }) => {
     return (
         <div className="grid grid-cols-10 gap-2 items-center text-center p-2 rounded-lg odd:bg-surface-base even:bg-transparent">
-            <div className="col-span-1 text-lg">{getRankIcon(entry.rank)}</div>
+            <div className="col-span-1 text-lg"><RankIcon rank={entry.rank} /></div>
             <div className="col-span-4 text-left truncate">{entry.player}</div>
             <div className="col-span-2 text-sm font-mono">{entry.record}</div>
             <div className="col-span-3 text-sm font-bold text-accent">{entry.reward}</div>
