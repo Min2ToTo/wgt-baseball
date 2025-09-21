@@ -13,12 +13,10 @@ interface LanguageSelectionModalProps {
 }
 
 export const LanguageSelectionModal: React.FC<LanguageSelectionModalProps> = ({ isOpen }) => {
-    const { t, setLanguage, setIsLanguageModalOpen } = useGame();
+    const { t, onSelectLanguage } = useGame();
 
     const handleSelectLanguage = (langCode: Language) => {
-        setLanguage(langCode);
-        localStorage.setItem('wgt-baseball-lang', langCode);
-        setIsLanguageModalOpen(false);
+        onSelectLanguage(langCode);
     };
 
     if (!isOpen) {

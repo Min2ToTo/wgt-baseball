@@ -10,12 +10,13 @@ import { ethers } from 'ethers';
 import { AchievementsScreen } from './components/AchievementsScreen';
 import { RankingScreen } from './components/RankingScreen';
 import { AuthScreen } from './components/AuthScreen';
+import { WORLDCOIN_APP_ID } from './constants';
 
 // World App Bridge type definition (simplified)
 declare global {
     interface Window {
         worldapp?: {
-            getUser: () => Promise<{ isVerified: boolean; worldIdAddress: string | null; } | null>;
+            getUser: (params: { app_id: string }) => Promise<{ isVerified: boolean; worldIdAddress: string | null; } | null>;
             theme: {
                 subscribe: (callback: (theme: 'light' | 'dark') => void) => () => void;
             };
@@ -44,57 +45,64 @@ const App: React.FC = () => {
     const [authState, setAuthState] = useState<AuthState>('loading');
     const [walletAddress, setWalletAddress] = useState<string | null>(null);
     const [wgt, setWgt] = useState(0);
-    
-    useEffect(() => {
-        const savedLang = localStorage.getItem('wgt-baseball-lang') as Language;
-        if (savedLang && translations[savedLang]) {
-            setLanguage(savedLang);
-        } else {
-            setIsLanguageModalOpen(true);
-        }
-    }, []);
 
-    // World App Integration Effect
-    useEffect(() => {
+    // Onboarding State
+    const [isOnboarding, setIsOnboarding] = useState(false);
+    
+    // Step 2: World App Authentication
+    const handleAuthentication = useCallback(async () => {
         if (typeof window.worldapp === 'undefined') {
             console.warn("World App bridge not found. Running in standalone mode for debugging.");
             setWalletAddress('0xDEBUG000000000000000000000000000000000000');
-            setAuthState('verified'); // Bypass AuthScreen for standalone debugging
+            setAuthState('verified');
             return;
         }
 
-        let themeUnsubscribe: (() => void) | undefined;
-
-        const initializeWorldApp = async () => {
-            setAuthState('loading');
-            try {
-                // Subscribe to theme changes
-                themeUnsubscribe = window.worldapp?.theme.subscribe((newTheme) => {
-                    setTheme(newTheme === 'dark' ? 'dark' : 'light');
-                });
-
-                // Get user data
-                const user = await window.worldapp?.getUser();
-                if (user?.isVerified && user.worldIdAddress) {
-                    setWalletAddress(user.worldIdAddress);
-                    setAuthState('verified');
-                } else {
-                    console.log("User is not verified with World ID or not logged in.");
-                    setAuthState('unverified');
+        setAuthState('loading');
+        try {
+            const user = await window.worldapp.getUser({ app_id: WORLDCOIN_APP_ID });
+            if (user?.isVerified && user.worldIdAddress) {
+                setWalletAddress(user.worldIdAddress);
+                setAuthState('verified');
+                // If this was the first run, show the help modal after successful auth
+                if (isOnboarding) {
+                    setIsHelpModalOpen(true);
                 }
-            } catch (error) {
-                console.error("Error initializing World App bridge:", error);
-                setAuthState('error');
+            } else {
+                setAuthState('unverified');
             }
-        };
+        } catch (error) {
+            console.error("Error authenticating with World App:", error);
+            setAuthState('error');
+        }
+    }, [isOnboarding]);
 
-        initializeWorldApp();
+    // Step 1: Language and Onboarding Check (runs once on mount)
+    useEffect(() => {
+        const savedLang = localStorage.getItem('wgt-baseball-lang') as Language;
+        const hasOnboarded = localStorage.getItem('wgt-baseball-onboarded') === 'true';
+
+        if (savedLang && translations[savedLang]) {
+            setLanguage(savedLang);
+            // Language is set, proceed directly to authentication
+            handleAuthentication();
+        } else {
+            // First time user: start onboarding
+            setIsOnboarding(true);
+            setIsLanguageModalOpen(true);
+        }
+
+        // Subscribe to theme changes from World App
+        const themeUnsubscribe = window.worldapp?.theme.subscribe((newTheme) => {
+            setTheme(newTheme === 'dark' ? 'dark' : 'light');
+        });
 
         return () => {
             if (themeUnsubscribe) {
                 themeUnsubscribe();
             }
         };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     
     useEffect(() => {
@@ -120,13 +128,30 @@ const App: React.FC = () => {
             } catch (error) {
                 console.error("Could not fetch balance from contract. This is expected if the contract address and RPC URL are placeholders.", error);
                 console.log("Falling back to mock data for MVP.");
-                // For this MVP simulation with a new user / if contract call fails:
                 setWgt(150); 
             }
         };
 
         fetchBalances();
     }, [walletAddress]);
+    
+    // Onboarding flow handlers
+    const handleLanguageSelected = (lang: Language) => {
+        setLanguage(lang);
+        localStorage.setItem('wgt-baseball-lang', lang);
+        setIsLanguageModalOpen(false);
+        // Language selected, now proceed to authentication
+        handleAuthentication();
+    };
+
+    const handleCloseHelpModal = () => {
+        setIsHelpModalOpen(false);
+        // If we were in the onboarding flow, mark it as complete
+        if (isOnboarding) {
+            localStorage.setItem('wgt-baseball-onboarded', 'true');
+            setIsOnboarding(false);
+        }
+    };
 
     const t = useCallback((key: string, params?: { [key: string]: string | number }) => {
         const keys = key.split('.');
@@ -186,6 +211,8 @@ const App: React.FC = () => {
         theme,
         setTheme,
         authState,
+        onSelectLanguage: handleLanguageSelected,
+        onCloseHelpModal: handleCloseHelpModal,
     }), [wgt, startGame, quitGame, showAchievements, showRanking, t, language, isLanguageModalOpen, isHelpModalOpen, walletAddress, theme, authState]);
 
     const renderContent = () => {
@@ -213,7 +240,7 @@ const App: React.FC = () => {
                 </div>
             </div>
             <LanguageSelectionModal isOpen={isLanguageModalOpen} />
-            <HelpModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
+            <HelpModal isOpen={isHelpModalOpen} onClose={handleCloseHelpModal} />
         </GameContext.Provider>
     );
 };

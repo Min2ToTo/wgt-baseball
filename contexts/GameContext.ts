@@ -20,6 +20,8 @@ export interface GameContextType {
     theme: Theme;
     setTheme: Dispatch<SetStateAction<Theme>>;
     authState: AuthState;
+    onSelectLanguage: (lang: Language) => void;
+    onCloseHelpModal: () => void;
 }
 
 export const GameContext = createContext<GameContextType | undefined>(undefined);
