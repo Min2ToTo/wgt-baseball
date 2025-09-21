@@ -16,6 +16,10 @@ const enTranslations: Translation = {
     connecting: "Connecting to World App...",
     unverified: "Please verify your World ID in the World App to play.",
     error: "Could not connect to World App. Please try again later.",
+    verifyTitle: "Verify Humanity",
+    verifyDescription: "To ensure a fair, bot-free gaming environment, please verify you are a unique human with World ID.",
+    verifyAction: "Verify with World ID",
+    retry: "Retry",
   },
   main: {
     challengeMode: "Challenge Mode",
@@ -184,6 +188,10 @@ const koTranslations: Translation = {
         connecting: "월드앱에 연결 중...",
         unverified: "플레이하려면 월드앱에서 월드 ID를 인증해주세요.",
         error: "월드앱에 연결할 수 없습니다. 나중에 다시 시도해주세요.",
+        verifyTitle: "사용자 인증",
+        verifyDescription: "공정하고 봇 없는 게임 환경을 위해, 월드 ID로 고유한 사용자임을 인증해주세요.",
+        verifyAction: "World ID로 인증",
+        retry: "다시 시도",
     },
     main: {
       challengeMode: "도전 모드",

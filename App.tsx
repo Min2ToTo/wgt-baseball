@@ -10,19 +10,10 @@ import { ethers } from 'ethers';
 import { AchievementsScreen } from './components/AchievementsScreen';
 import { RankingScreen } from './components/RankingScreen';
 import { AuthScreen } from './components/AuthScreen';
-import { WORLDCOIN_APP_ID } from './constants';
+import { WORLD_ID_ACTION_IDENTIFIER } from './constants';
+import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js';
 
-// World App Bridge type definition (simplified)
-declare global {
-    interface Window {
-        worldapp?: {
-            getUser: (params: { app_id: string }) => Promise<{ isVerified: boolean; worldIdAddress: string | null; } | null>;
-            theme: {
-                subscribe: (callback: (theme: 'light' | 'dark') => void) => () => void;
-            };
-        }
-    }
-}
+// World App Bridge type definition is now handled by MiniKit
 
 // TODO: Replace with your actual deployed contract address and ABI
 const WGT_CONTRACT_ADDRESS = '0x0000000000000000000000000000000000000000'; // Using a placeholder address
@@ -42,67 +33,65 @@ const App: React.FC = () => {
     const [theme, setTheme] = useState<Theme>('light');
     
     // Authentication & User Data
-    const [authState, setAuthState] = useState<AuthState>('loading');
+    const [authState, setAuthState] = useState<AuthState>('unverified'); // Start as unverified
     const [walletAddress, setWalletAddress] = useState<string | null>(null);
     const [wgt, setWgt] = useState(0);
 
     // Onboarding State
     const [isOnboarding, setIsOnboarding] = useState(false);
     
-    // Step 2: World App Authentication
     const handleAuthentication = useCallback(async () => {
-        if (typeof window.worldapp === 'undefined') {
-            console.warn("World App bridge not found. Running in standalone mode for debugging.");
-            setWalletAddress('0xDEBUG000000000000000000000000000000000000');
+        if (!MiniKit.isInstalled()) {
+            console.warn("MiniKit not found. Running in standalone debug mode.");
             setAuthState('verified');
+            setWalletAddress('0xDEBUG000000000000000000000000000000000000');
             return;
         }
 
         setAuthState('loading');
         try {
-            const user = await window.worldapp.getUser({ app_id: WORLDCOIN_APP_ID });
-            if (user?.isVerified && user.worldIdAddress) {
-                setWalletAddress(user.worldIdAddress);
+            const { finalPayload } = await MiniKit.commandsAsync.verify({
+                action: WORLD_ID_ACTION_IDENTIFIER,
+                verification_level: VerificationLevel.Orb,
+            });
+
+            if (finalPayload.status === 'success' && finalPayload.proof) {
+                // In a real app, this proof MUST be verified on a backend.
+                // For this MVP, we trust the successful proof generation as verification.
+                // The nullifier_hash from the payload is a representation of the user's unique identity.
+                setWalletAddress(finalPayload.nullifier_hash); 
                 setAuthState('verified');
-                // If this was the first run, show the help modal after successful auth
                 if (isOnboarding) {
                     setIsHelpModalOpen(true);
                 }
             } else {
-                setAuthState('unverified');
+                console.error('Verification failed or was cancelled.', finalPayload);
+                setAuthState('error');
             }
         } catch (error) {
-            console.error("Error authenticating with World App:", error);
+            console.error("Error during MiniKit verification:", error);
             setAuthState('error');
         }
     }, [isOnboarding]);
 
-    // Step 1: Language and Onboarding Check (runs once on mount)
     useEffect(() => {
         const savedLang = localStorage.getItem('wgt-baseball-lang') as Language;
         const hasOnboarded = localStorage.getItem('wgt-baseball-onboarded') === 'true';
 
         if (savedLang && translations[savedLang]) {
             setLanguage(savedLang);
-            // Language is set, proceed directly to authentication
-            handleAuthentication();
         } else {
-            // First time user: start onboarding
             setIsOnboarding(true);
             setIsLanguageModalOpen(true);
         }
 
-        // Subscribe to theme changes from World App
-        const themeUnsubscribe = window.worldapp?.theme.subscribe((newTheme) => {
-            setTheme(newTheme === 'dark' ? 'dark' : 'light');
+        const themeUnsubscribe = MiniKit.subscribe('theme', (newTheme) => {
+            setTheme(newTheme.theme === 'dark' ? 'dark' : 'light');
         });
 
         return () => {
-            if (themeUnsubscribe) {
-                themeUnsubscribe();
-            }
+           themeUnsubscribe();
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     
     useEffect(() => {
@@ -110,43 +99,26 @@ const App: React.FC = () => {
         localStorage.setItem('wgt-baseball-theme', theme);
     }, [theme]);
 
-    // Fetch user balances when wallet address is available
     useEffect(() => {
         if (!walletAddress) return;
 
         const fetchBalances = async () => {
-            console.log(`Attempting to fetch balances for ${walletAddress}...`);
-            try {
-                const provider = new ethers.JsonRpcProvider(RPC_URL);
-                const contract = new ethers.Contract(WGT_CONTRACT_ADDRESS, WGT_CONTRACT_ABI, provider);
-                const wgtBalance = await contract.balanceOf(walletAddress);
-                const formattedBalance = Number(ethers.formatUnits(wgtBalance, 18));
-                
-                console.log('Successfully fetched balance from contract:', formattedBalance);
-                setWgt(formattedBalance);
-
-            } catch (error) {
-                console.error("Could not fetch balance from contract. This is expected if the contract address and RPC URL are placeholders.", error);
-                console.log("Falling back to mock data for MVP.");
-                setWgt(150); 
-            }
+            console.log(`User is considered logged in. Unique Nullifier Hash: ${walletAddress}`);
+            console.log("Since real-time balance fetching requires a real contract and wallet, we'll use mock data.");
+            setWgt(150);
         };
 
         fetchBalances();
     }, [walletAddress]);
     
-    // Onboarding flow handlers
     const handleLanguageSelected = (lang: Language) => {
         setLanguage(lang);
         localStorage.setItem('wgt-baseball-lang', lang);
         setIsLanguageModalOpen(false);
-        // Language selected, now proceed to authentication
-        handleAuthentication();
     };
 
     const handleCloseHelpModal = () => {
         setIsHelpModalOpen(false);
-        // If we were in the onboarding flow, mark it as complete
         if (isOnboarding) {
             localStorage.setItem('wgt-baseball-onboarded', 'true');
             setIsOnboarding(false);
@@ -207,13 +179,14 @@ const App: React.FC = () => {
         isHelpModalOpen,
         setIsHelpModalOpen,
         walletAddress,
-        isAuthenticated: !!walletAddress,
+        isAuthenticated: authState === 'verified',
         theme,
         setTheme,
         authState,
         onSelectLanguage: handleLanguageSelected,
         onCloseHelpModal: handleCloseHelpModal,
-    }), [wgt, startGame, quitGame, showAchievements, showRanking, t, language, isLanguageModalOpen, isHelpModalOpen, walletAddress, theme, authState]);
+        handleAuthentication,
+    }), [wgt, startGame, quitGame, showAchievements, showRanking, t, language, isLanguageModalOpen, isHelpModalOpen, walletAddress, theme, authState, handleAuthentication]);
 
     const renderContent = () => {
         if (authState !== 'verified') {

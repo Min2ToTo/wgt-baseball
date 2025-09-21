@@ -22,6 +22,7 @@ export interface GameContextType {
     authState: AuthState;
     onSelectLanguage: (lang: Language) => void;
     onCloseHelpModal: () => void;
+    handleAuthentication: () => Promise<void>;
 }
 
 export const GameContext = createContext<GameContextType | undefined>(undefined);
